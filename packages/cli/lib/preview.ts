@@ -27,26 +27,29 @@ export default async (config: CliOptions): Promise<void> => {
         .map((res: any) => res.content)[0]
       return parser(content)
     }
+    try {
+      const app = await carlo.launch()
+      app.on('exit', () => process.exit())
+      app.serveFolder(__dirname + '/templates/preview')
 
-    const app = await carlo.launch()
-    app.on('exit', () => process.exit())
-    app.serveFolder(__dirname + '/templates/preview')
-
-    class Events extends EventEmitter {}
-    const event = new Events()
-    await app.exposeFunction('event', () => event)
-    await app.exposeFunction('generate', async () => {
-      return await generate()
-    })
-
-    await app.load('index.html')
-
-    chokidar
-      .watch(vueFile, {
-        ignoreInitial: true
+      class Events extends EventEmitter {}
+      const event = new Events()
+      await app.exposeFunction('event', () => event)
+      await app.exposeFunction('generate', async () => {
+        return await generate()
       })
-      .on('change', () => {
-        event.emit('update')
-      })
+
+      await app.load('index.html')
+
+      chokidar
+        .watch(vueFile, {
+          ignoreInitial: true
+        })
+        .on('change', () => {
+          event.emit('update')
+        })
+    } catch (err) {
+      console.error(err)
+    }
   }
 }
